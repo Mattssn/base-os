@@ -47,7 +47,8 @@ Type on the computer:
 | Command | |
 |---|---|
 | `<song name>` | play the top YouTube result |
-| `<YouTube link>` | play a video, or queue a whole playlist |
+| `<YouTube link>` | play that video (even if the link is from a playlist/mix) |
+| `<playlist link>` | `youtube.com/playlist?list=...` queues the whole playlist (max 200) |
 | `search <text>`, then `3` | pick from the results |
 | `pause` / `skip` / `stop` | |
 | `vol 150` | volume (0-300%) |

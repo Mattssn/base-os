@@ -26,6 +26,7 @@ CACHE = Path(os.environ.get("CACHE_DIR", "/cache"))
 CACHE_LIMIT = int(os.environ.get("CACHE_LIMIT_MB", "500")) * 1024 * 1024
 PORT = int(os.environ.get("PORT", "8096"))
 SEARCH_RESULTS = 8
+MAX_PLAYLIST = 200
 MAX_CHUNK = 1024 * 1024
 MAX_SECONDS = 2 * 60 * 60  # longer videos are cut off (6 KB/s, so ~43 MB max per track)
 WAIT_SECONDS = 20  # CC:Tweaked times out HTTP requests after 30s
@@ -112,8 +113,11 @@ def search(query):
     query = query.strip()
     target = query if query.startswith(("http://", "https://")) else f"ytsearch{SEARCH_RESULTS}:{query}"
 
+    # --no-playlist: a video link that's part of a playlist/mix (watch?v=X&list=Y) plays just
+    # that video. Only real playlist links (playlist?list=Y) queue the whole list.
     out = subprocess.run(
-        ["yt-dlp", "-J", "--flat-playlist", "--no-warnings", target],
+        ["yt-dlp", "-J", "--flat-playlist", "--no-playlist", "--playlist-end", str(MAX_PLAYLIST),
+         "--no-warnings", target],
         capture_output=True, timeout=60,
     )
 
