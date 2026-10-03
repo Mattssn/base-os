@@ -1,0 +1,17 @@
+# Base OS music server. Only reachable over Tailscale (bound to the tailnet IP).
+# Start:  docker compose up -d --build
+# Fix YouTube errors: docker compose restart  (updates yt-dlp)
+services:
+  music:
+    build: .
+    container_name: baseos-music
+    restart: unless-stopped
+    ports:
+      - "${TAILSCALE_IP:-100.64.7.94}:8096:8096"
+    environment:
+      CACHE_LIMIT_MB: "500"
+    volumes:
+      - cache:/cache
+
+volumes:
+  cache:

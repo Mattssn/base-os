@@ -3,6 +3,7 @@
 
 local ui = require("ui")
 local me = require("me")
+local music = require("music")
 
 local home = {}
 
@@ -76,6 +77,12 @@ function home.draw(screen, s, apps)
         screen:text(2, y, "Flow", colors.lightGray, nil, LABEL)
         screen:text(2 + LABEL, y, inText, colors.lime)
         screen:row(y, "-" .. ui.fmt(s.flow.totalOut) .. "/m out", colors.red, nil, 2 + LABEL + #inText)
+        y = y + 1
+    end
+
+    if music.current then
+        local state = music.state == "paused" and "|| " or "> "
+        stat(screen, y, "Music", state .. music.current.title, colors.magenta)
         y = y + 1
     end
 

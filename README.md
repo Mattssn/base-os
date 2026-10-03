@@ -20,7 +20,10 @@ src/                     <- what ends up on the computer
     me.lua               reads the ME Bridge (1.21.1 storage-system API)
     flow.lua             items/min in and out (compares item counts over time)
     home.lua             start screen (overview stats + app buttons)
+    music.lua            music player (streams from the music server to every speaker)
     apps/me.lua          ME System app (AE2 dashboard + item flow)
+    apps/music.lua       Music app (now playing, controls, queue)
+server/                       YouTube -> DFPWM music server (Docker, runs on the home server)
 reference/ae2_dashboard.lua   the original standalone dashboard
 docs/                         CC:T + Advanced Peripherals API notes for 1.21.1
 ```
@@ -34,11 +37,15 @@ docs/                         CC:T + Advanced Peripherals API notes for 1.21.1
    This downloads everything in `src/` and reboots. Run the same command again to update.
    (It needs the server to have CC:T HTTP enabled. That's the default.)
 
-Press **Q** on the computer to stop Base OS.
+Type `quit` on the computer (or hold Ctrl+T) to stop Base OS.
+
+## Music
+See [docs/music-setup.md](docs/music-setup.md). It needs a one-time CC:Tweaked config change on the Minecraft server, then `set baseos.music_server http://100.64.7.94:8096`.
 
 ## Settings
 - `set baseos.text_scale 1`: monitor text scale (default 0.5)
 - `set baseos.refresh 2`: seconds between refreshes (default 1)
+- `set baseos.music_server <url>`: music server address (see Music)
 - `set baseos.flow_window 120`: seconds of history used for items per minute (default 60)
 
 ## Adding an app
