@@ -18,7 +18,8 @@ Converted songs are cached (max 500 MB). Live streams are skipped and tracks are
 ## 2. Allow it in CC:Tweaked (Minecraft server)
 CC:Tweaked blocks private/Tailscale addresses (`100.64.0.0/10`) by default. Allow **only** the music server.
 
-Edit `<world>/serverconfig/computercraft-server.toml` and add this rule **above** the existing
+Edit `config/computercraft-server.toml` in the server folder and add this rule **above** the existing
+(On some setups it's `<world>/serverconfig/computercraft-server.toml` instead. Use whichever one contains `[[http.rules]]`.)
 `host = "$private"` deny rule (the first matching rule wins):
 
 ```toml
