@@ -143,6 +143,7 @@ local HELP = {
     "search <text>  list results, then type a number",
     "pause / skip / stop",
     "vol <0-300>    volume in %",
+    "stats [reset]  why is music skipping?",
     "quit           stop Base OS"
 }
 
@@ -183,6 +184,22 @@ local function command(line)
         end
     elseif lower == "pause" or lower == "resume" or lower == "play" and arg == "" then
         music.togglePause()
+    elseif lower == "stats" then
+        local st = music.stats
+
+        if st.wall > 0 then
+            print(("Measured %ds of playback"):format(math.floor(st.wall)))
+            print(("Server TPS: %.1f"):format(math.min(20, st.ticks / st.wall * 20)))
+            print(("Server freezes >0.4s: %d (worst %.1fs)"):format(st.freezes, st.worstFreeze))
+            print(("Base OS late with audio: %d (worst %.1fs)"):format(st.late, st.worstLate))
+        else
+            print("Play some music first.")
+        end
+
+        if arg == "reset" then
+            music.resetStats()
+            print("Stats reset.")
+        end
     elseif lower == "skip" then
         music.skip()
     elseif lower == "stop" then

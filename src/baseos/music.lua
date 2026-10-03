@@ -29,6 +29,60 @@ local accepted = {}   -- speaker name -> true once it took `pending`
 local played = 0      -- bytes played so far
 local generation = 0  -- bumped on every track change so stale responses are ignored
 
+-- Stutter diagnostics (the `stats` console command). Measured between each speaker's
+-- speaker_audio_empty events, which arrive once per slice while playing:
+--   real time running ahead of server ticks (os.clock) = the server froze/lagged
+--   more ticks than one slice lasts                     = Base OS handed audio over late
+local SLICE_SECONDS = SLICE * 8 / 48000
+local lastEmpty = nil -- { wall = seconds, tick = seconds } at the last event
+local statSpeaker = nil -- only one speaker is measured, so freezes aren't counted twice
+
+local function newStats()
+    return { wall = 0, ticks = 0, freezes = 0, worstFreeze = 0, late = 0, worstLate = 0 }
+end
+
+music.stats = newStats()
+
+function music.resetStats()
+    music.stats = newStats()
+    lastEmpty = nil
+    statSpeaker = nil
+end
+
+local function recordEmpty(name)
+    statSpeaker = statSpeaker or name
+
+    if name ~= statSpeaker then
+        return
+    end
+
+    local now = { wall = os.epoch("utc") / 1000, tick = os.clock() }
+    local last = lastEmpty
+    local st = music.stats
+
+    if last then
+        local wall = now.wall - last.wall
+        local ticks = now.tick - last.tick
+        local freeze = wall - ticks
+        local late = ticks - SLICE_SECONDS
+
+        st.wall = st.wall + wall
+        st.ticks = st.ticks + ticks
+
+        if freeze > 0.4 then
+            st.freezes = st.freezes + 1
+            st.worstFreeze = math.max(st.worstFreeze, freeze)
+        end
+
+        if late > 0.3 then
+            st.late = st.late + 1
+            st.worstLate = math.max(st.worstLate, late)
+        end
+    end
+
+    lastEmpty = now
+end
+
 settings.define("baseos.music_server", {
     description = "Base OS music server URL, e.g. http://100.64.7.94:8096",
     type = "string"
@@ -73,6 +127,8 @@ local function nextTrack()
     pending = nil
     accepted = {}
     played = 0
+    lastEmpty = nil
+    statSpeaker = nil
 
     music.current = table.remove(music.queue, 1)
 
@@ -114,6 +170,7 @@ function music.togglePause()
         music.state = "paused"
         stopSpeakers()
         accepted = {} -- replay the current slice on resume
+        lastEmpty = nil
     end
 
     wake()
@@ -289,6 +346,10 @@ function music.run()
         pump()
 
         local event, url, a, b = os.pullEvent()
+
+        if event == "speaker_audio_empty" and music.state == "playing" then
+            recordEmpty(url)
+        end
 
         if event == "http_success" and url == request then
             onChunk(a)
