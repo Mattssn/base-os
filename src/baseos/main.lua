@@ -9,6 +9,7 @@ package.path = "/" .. fs.combine(root, "?.lua") .. ";" .. package.path
 
 local ui = require("ui")
 local me = require("me")
+local flow = require("flow")
 local home = require("home")
 
 -- Apps shown on the start screen, in order. Add new ones here.
@@ -38,7 +39,14 @@ settings.define("baseos.refresh", {
     type = "number"
 })
 
+settings.define("baseos.flow_window", {
+    description = "Base OS seconds of history used for items per minute",
+    default = 60,
+    type = "number"
+})
+
 local REFRESH = settings.get("baseos.refresh")
+local FLOW_WINDOW = settings.get("baseos.flow_window")
 
 --------------------------------------------------
 -- MONITOR
@@ -63,6 +71,7 @@ local screen = ui.new(monitor)
 local current = "home"
 local snapshot = me.empty()
 snapshot.loading = true
+snapshot.flow = flow.result
 
 local function draw()
     screen:resize()
@@ -90,6 +99,7 @@ end
 local function poller()
     while true do
         snapshot = me.read()
+        snapshot.flow = flow.update(snapshot, FLOW_WINDOW)
         draw()
         sleep(REFRESH)
     end

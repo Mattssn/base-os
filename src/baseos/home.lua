@@ -70,6 +70,13 @@ function home.draw(screen, s, apps)
 
         stat(screen, y, "Items", ui.fmt(s.totalItems) .. "  (" .. #s.items .. " types)")
         y = y + 1
+
+        local inText = "+" .. ui.fmt(s.flow.totalIn) .. "/m in   "
+
+        screen:text(2, y, "Flow", colors.lightGray, nil, LABEL)
+        screen:text(2 + LABEL, y, inText, colors.lime)
+        screen:row(y, "-" .. ui.fmt(s.flow.totalOut) .. "/m out", colors.red, nil, 2 + LABEL + #inText)
+        y = y + 1
     end
 
     --------------------------------------------------
