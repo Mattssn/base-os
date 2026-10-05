@@ -27,9 +27,8 @@ function app.draw(screen, s)
     local width = w - 2
     local track = music.current
 
-    screen:titleBar("", ui.clock())
+    screen:titleBar("", ui.clock(), "MUSIC")
     screen:button("home", 1, 1, 8, 1, "< HOME", colors.white, colors.gray)
-    screen:center(1, "MUSIC", colors.white, colors.blue)
 
     --------------------------------------------------
     -- NOW PLAYING

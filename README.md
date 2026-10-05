@@ -23,6 +23,8 @@ src/                     <- what ends up on the computer
     music.lua            music player (streams from the music server to every speaker)
     apps/me.lua          ME System app (AE2 dashboard + item flow)
     apps/music.lua       Music app (now playing, controls, queue)
+    env.lua              reads every environment detector (weather, light, entities, radiation)
+    apps/env.lua         Environment app (per detector info + nearby entities)
 server/                       YouTube -> DFPWM music server (Docker, runs on the home server)
 reference/ae2_dashboard.lua   the original standalone dashboard
 docs/                         CC:T + Advanced Peripherals API notes for 1.21.1
@@ -46,6 +48,8 @@ See [docs/music-setup.md](docs/music-setup.md). It needs a one-time CC:Tweaked c
 - `set baseos.text_scale 1`: monitor text scale (default 0.5)
 - `set baseos.refresh 2`: seconds between refreshes (default 1)
 - `set baseos.music_server <url>`: music server address (see Music)
+- `set baseos.env_range 12`: entity scan radius for environment detectors (1-16, default 8; above 8 may need energy)
+- `set baseos.env_radiation_alert 0.001`: radiation (Sv/h) that turns the title bar red (default 0.00001)
 - `set baseos.flow_window 120`: seconds of history used for items per minute (default 60)
 
 ## Adding an app

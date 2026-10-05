@@ -67,12 +67,42 @@ function ui:center(y, text, fg, bg)
     self:text(x, y, text, fg, bg)
 end
 
--- Full-width bar across row 1, with optional text on the right (e.g. a clock).
-function ui:titleBar(title, right)
-    self:row(1, " " .. title, colors.white, colors.blue)
+-- Shown on every title bar, set by main.lua. Each is a list of variants, longest first;
+-- the longest one that fits is used.
+--   ui.status: info next to the clock (e.g. weather)
+--   ui.alert:  turns the bar red and replaces the status (e.g. radiation)
+ui.status = nil
+ui.alert = nil
+
+-- Full-width bar across row 1: title on the left, optional centered text,
+-- and `right` (e.g. a clock) on the right with the status/alert in front of it.
+function ui:titleBar(title, right, centered)
+    local bg = ui.alert and colors.red or colors.blue
+
+    self:row(1, " " .. title, colors.white, bg)
+
+    if centered then
+        self:center(1, centered, colors.white, bg)
+    end
 
     if right then
-        self:text(self.w - #right, 1, right, colors.lightGray, colors.blue)
+        -- Room to the right of the title (or of the centered text)
+        local leftEnd = #title + 2
+
+        if centered then
+            leftEnd = math.floor((self.w - #centered) / 2) + #centered + 1
+        end
+
+        local room = self.w - leftEnd - 2
+
+        for _, extra in ipairs(ui.alert or ui.status or {}) do
+            if #extra + 3 + #right <= room then
+                right = extra .. " | " .. right
+                break
+            end
+        end
+
+        self:text(self.w - #right, 1, right, ui.alert and colors.white or colors.lightGray, bg)
     end
 end
 

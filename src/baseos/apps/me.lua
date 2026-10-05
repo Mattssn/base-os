@@ -154,9 +154,8 @@ function app.draw(screen, s)
     local w, h = screen.w, screen.h
     local f = s.flow
 
-    screen:titleBar("", ui.clock())
+    screen:titleBar("", ui.clock(), "ME SYSTEM")
     screen:button("home", 1, 1, 8, 1, "< HOME", colors.white, colors.gray)
-    screen:center(1, "ME SYSTEM", colors.white, colors.blue)
 
     local incoming = flowList("TOP INCOMING", colors.lime, "+", f.incoming)
     local outgoing = flowList("TOP OUTGOING", colors.red, "-", f.outgoing)

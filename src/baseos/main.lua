@@ -11,12 +11,14 @@ local ui = require("ui")
 local me = require("me")
 local flow = require("flow")
 local music = require("music")
+local env = require("env")
 local home = require("home")
 
 -- Apps shown on the start screen, in order. Add new ones here.
 local apps = {
     require("apps.me"),
-    require("apps.music")
+    require("apps.music"),
+    require("apps.env")
 }
 
 local appsById = {}
@@ -75,9 +77,12 @@ local snapshot = me.empty()
 snapshot.loading = true
 snapshot.flow = flow.result
 
+local envData = { detectors = {} }
+
 local function draw()
     screen:resize()
     screen:clearButtons()
+    snapshot.env = envData
 
     if current == "home" then
         home.draw(screen, snapshot, apps)
@@ -104,6 +109,20 @@ local function poller()
         snapshot.flow = flow.update(snapshot, FLOW_WINDOW)
         draw()
         sleep(REFRESH)
+    end
+end
+
+-- Environment detectors: every call takes a server tick, so read them slowly and
+-- separately from the ME system.
+local ENV_REFRESH = 5
+
+local function envPoller()
+    while true do
+        envData = env.read()
+        ui.status = env.status(envData)
+        ui.alert = envData.alert
+        draw()
+        sleep(ENV_REFRESH)
     end
 end
 
@@ -259,7 +278,7 @@ print("Type a song name to play it, or 'help'.")
 open("home")
 
 -- Ctrl+T (terminate) counts as a clean stop, so startup.lua doesn't restart us
-local ok, err = pcall(parallel.waitForAny, poller, input, console, music.run)
+local ok, err = pcall(parallel.waitForAny, poller, envPoller, input, console, music.run)
 
 if not ok and err ~= "Terminated" then
     error(err, 0)

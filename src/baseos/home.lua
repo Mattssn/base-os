@@ -4,6 +4,7 @@
 local ui = require("ui")
 local me = require("me")
 local music = require("music")
+local env = require("env")
 
 local home = {}
 
@@ -78,6 +79,42 @@ function home.draw(screen, s, apps)
         screen:text(2 + LABEL, y, inText, colors.lime)
         screen:row(y, "-" .. ui.fmt(s.flow.totalOut) .. "/m out", colors.red, nil, 2 + LABEL + #inText)
         y = y + 1
+    end
+
+    local e = s.env
+
+    if e and #e.detectors > 0 then
+        local r = e.detectors[1]
+
+        stat(screen, y, "Weather", r.weather .. "  " .. r.time .. (r.night and " (night)" or ""), r.thunder and colors.yellow or colors.white)
+        y = y + 1
+
+        -- Entities near every detector together
+        local all = {}
+
+        for _, d in ipairs(e.detectors) do
+            for _, entity in ipairs(d.entities) do
+                table.insert(all, entity)
+            end
+        end
+
+        local top = {}
+
+        for i, g in ipairs(env.groups(all)) do
+            if i > 3 then
+                break
+            end
+
+            table.insert(top, g.count .. " " .. g.name)
+        end
+
+        stat(screen, y, "Nearby", #all .. (#top > 0 and "  (" .. table.concat(top, ", ") .. ")" or ""))
+        y = y + 1
+
+        if e.radiation then
+            stat(screen, y, "Radiation", e.radiationText or tostring(e.radiation), e.alert and colors.red or colors.lime)
+            y = y + 1
+        end
     end
 
     if music.current then

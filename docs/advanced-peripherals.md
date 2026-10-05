@@ -72,7 +72,17 @@ Item/stack fields: https://docs.advanced-peripherals.de/0.7/guides/objects/
 - Event: `chat(username, message, uuid, isHidden, messageUtf8)`. A message that starts with `$` fires the event but stays out of public chat, which makes it useful for commands.
 
 ## Environment Detector (`environment_detector`)
-`getBiome`, `getBlockLightLevel`, `getDayLightLevel`, `getSkyLightLevel`, `getDimension`, `getDimensionPaN`, `getDimensionProvider`, `getMoonId`, `getMoonName`, `getTime`, `getRadiation`, `getRadiationRaw`, `isDimension(d)`, `isMoon(id)`, `isRaining`, `isSunny`, `isThunder`, `isSlimeChunk`, `listDimensions`, `scanEntities(range)`
+Checked against the AP `release/1.21.1` source:
+- `getBiome()`, e.g. `minecraft:plains`. `getDimension()` returns the full id, e.g. `minecraft:overworld`. `isDimension(id)`. `listDimensions()` returns paths only (`overworld`, `the_nether`).
+- `getTime()` gives the day time in ticks (can exceed 24000, so use `% 24000`; 0 is 6 AM). `isRaining()`, `isThunder()`, `isSunny()`.
+- `getMoonId()`, `getMoonName()`, `isMoon(id)`: **overworld only**. Anywhere else they return "Moon.exe not found...".
+- `getBlockLightLevel()`, `getSkyLightLevel()`, `getDayLightLevel()` (all measured at the block above the detector). `isSlimeChunk()`.
+- `canSleepHere()`, `canSleepPlayer(name)`: not listed in the docs.
+- `scanEntities(radius)` returns **living entities only**: `{name, uuid, id, tags, health, maxHealth, x, y, z (relative), ...}`, plus `baby` and `inLove` for animals.
+  It has a **2s cooldown**, is **free up to radius 8** and maxes out at 16. `scanCost(radius)` gives the cost.
+- `getRadiation()` returns `{radiation, unit}` and `getRadiationRaw()` returns Sv/h. Both need Mekanism, which ATM10 includes.
+- **Removed in 1.21.1:** `getDimensionPaN`, `getDimensionProvider`.
+- Every call runs on the server thread (one tick each), so poll slowly.
 
 ## Inventory Manager (`inventory_manager`)
 Needs a Memory Card that is bound to a player.
