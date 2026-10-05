@@ -53,48 +53,73 @@ local REFRESH = settings.get("baseos.refresh")
 local FLOW_WINDOW = settings.get("baseos.flow_window")
 
 --------------------------------------------------
--- MONITOR
+-- MONITORS (each one is an independent screen)
 --------------------------------------------------
 
-local monitor = peripheral.find("monitor")
+-- Optional per-monitor settings (use the name from `peripherals`, e.g. monitor_2):
+--   set baseos.text_scale.monitor_2 1    text scale for just that monitor
+--   set baseos.pin.monitor_2 me          always show one app (me, music, env), no HOME button
+local screens = {} -- monitor name -> { ui = screen, current = "home" or app id, pinned = app id or nil }
 
-if not monitor then
-    error("Monitor not found!", 0)
+local function addMonitor(name)
+    local mon = peripheral.wrap(name)
+    local pinned = settings.get("baseos.pin." .. name)
+
+    if not appsById[pinned] then
+        pinned = nil
+    end
+
+    mon.setTextScale(settings.get("baseos.text_scale." .. name) or settings.get("baseos.text_scale"))
+
+    local screen = ui.new(mon)
+    screen.pinned = pinned ~= nil
+    screen:clear()
+
+    screens[name] = { ui = screen, current = pinned or "home", pinned = pinned }
 end
 
-local monitorName = peripheral.getName(monitor)
-
-monitor.setTextScale(settings.get("baseos.text_scale"))
-
-local screen = ui.new(monitor)
+for _, name in ipairs(peripheral.getNames()) do
+    if peripheral.hasType(name, "monitor") then
+        addMonitor(name)
+    end
+end
 
 --------------------------------------------------
 -- STATE
 --------------------------------------------------
 
-local current = "home"
 local snapshot = me.empty()
 snapshot.loading = true
 snapshot.flow = flow.result
 
 local envData = { detectors = {} }
 
-local function draw()
-    screen:resize()
-    screen:clearButtons()
-    snapshot.env = envData
+local function drawScreen(s)
+    s.ui:resize()
+    s.ui:clearButtons()
 
-    if current == "home" then
-        home.draw(screen, snapshot, apps)
+    if s.current == "home" then
+        home.draw(s.ui, snapshot, apps)
     else
-        appsById[current].draw(screen, snapshot)
+        appsById[s.current].draw(s.ui, snapshot)
     end
 end
 
-local function open(id)
-    current = id
-    screen:clear()
-    draw()
+local function draw()
+    snapshot.env = envData
+
+    for name, s in pairs(screens) do
+        -- A monitor can disappear mid-draw; its peripheral_detach event removes it
+        if not pcall(drawScreen, s) and not peripheral.isPresent(name) then
+            screens[name] = nil
+        end
+    end
+end
+
+local function open(s, id)
+    s.current = id
+    s.ui:clear()
+    drawScreen(s)
 end
 
 --------------------------------------------------
@@ -130,22 +155,32 @@ local function input()
     while true do
         local event, a, b, c = os.pullEvent()
 
-        if event == "monitor_touch" and a == monitorName then
-            local id = screen:hit(b, c)
-            local app = appsById[current]
+        local s = screens[a]
 
-            if id == "home" then
-                open("home")
+        if event == "monitor_touch" and s then
+            local id = s.ui:hit(b, c)
+            local app = appsById[s.current]
+
+            if id == "home" and not s.pinned then
+                open(s, "home")
             elseif id and appsById[id] then
-                open(id)
+                open(s, id)
             elseif id and app and app.touch then
                 app.touch(id)
-                draw()
+                draw() -- e.g. music controls change what every monitor shows
             end
-        elseif event == "monitor_resize" and a == monitorName then
-            open(current)
-        elseif event == "peripheral" or event == "peripheral_detach" then
+        elseif event == "monitor_resize" and s then
+            open(s, s.current)
+        elseif event == "peripheral" then
             me.reset()
+
+            if peripheral.hasType(a, "monitor") then
+                addMonitor(a)
+                pcall(drawScreen, screens[a])
+            end
+        elseif event == "peripheral_detach" then
+            me.reset()
+            screens[a] = nil
         end
     end
 end
@@ -272,10 +307,17 @@ end
 
 term.clear()
 term.setCursorPos(1, 1)
-print("Base OS running on " .. monitorName)
+local names = {}
+
+for name in pairs(screens) do
+    table.insert(names, name)
+end
+
+table.sort(names)
+print(#names > 0 and "Base OS on " .. table.concat(names, ", ") or "Base OS (no monitor yet, connect one any time)")
 print("Type a song name to play it, or 'help'.")
 
-open("home")
+draw()
 
 -- Ctrl+T (terminate) counts as a clean stop, so startup.lua doesn't restart us
 local ok, err = pcall(parallel.waitForAny, poller, envPoller, input, console, music.run)
@@ -287,11 +329,12 @@ end
 music.stop()
 
 -- Clean exit
-monitor.setBackgroundColor(colors.black)
-monitor.clear()
-monitor.setCursorPos(1, 1)
-monitor.setTextColor(colors.gray)
-monitor.write("Base OS stopped")
+for _, s in pairs(screens) do
+    pcall(function()
+        s.ui:clear()
+        s.ui:text(1, 1, "Base OS stopped", colors.gray)
+    end)
+end
 
 term.clear()
 term.setCursorPos(1, 1)

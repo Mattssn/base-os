@@ -28,7 +28,10 @@ function app.draw(screen, s)
     local track = music.current
 
     screen:titleBar("", ui.clock(), "MUSIC")
-    screen:button("home", 1, 1, 8, 1, "< HOME", colors.white, colors.gray)
+
+    if not screen.pinned then
+        screen:button("home", 1, 1, 8, 1, "< HOME", colors.white, colors.gray)
+    end
 
     --------------------------------------------------
     -- NOW PLAYING

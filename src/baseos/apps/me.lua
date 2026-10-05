@@ -155,7 +155,10 @@ function app.draw(screen, s)
     local f = s.flow
 
     screen:titleBar("", ui.clock(), "ME SYSTEM")
-    screen:button("home", 1, 1, 8, 1, "< HOME", colors.white, colors.gray)
+
+    if not screen.pinned then
+        screen:button("home", 1, 1, 8, 1, "< HOME", colors.white, colors.gray)
+    end
 
     local incoming = flowList("TOP INCOMING", colors.lime, "+", f.incoming)
     local outgoing = flowList("TOP OUTGOING", colors.red, "-", f.outgoing)

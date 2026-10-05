@@ -1,7 +1,7 @@
 # Base OS
 
 An OS for CC: Tweaked computers in **All the Mods 10: To the Sky** (ATM10 TTS). It also uses **Advanced Peripherals**.
-It runs on a monitor. The start screen shows the key stats, and you tap a button to open an app.
+It runs on one or more monitors. The start screen shows the key stats, and you tap a button to open an app.
 
 | | |
 |---|---|
@@ -43,6 +43,15 @@ Type `quit` on the computer (or hold Ctrl+T) to stop Base OS.
 
 ## Music
 See [docs/music-setup.md](docs/music-setup.md). It needs a one-time CC:Tweaked config change on the Minecraft server, then `set baseos.music_server http://100.64.7.94:8096`.
+
+## Multiple monitors
+Connect as many monitors as you like (directly or over wired modems). Each one is an independent
+screen with its own start screen and taps, and they all share one ME/detector read. Monitors can be
+added or removed while Base OS is running. Find a monitor's name with `peripherals`.
+- `set baseos.pin.monitor_2 me`: that monitor always shows one app (`me`, `music` or `env`), with no HOME button.
+- `set baseos.text_scale.monitor_2 1`: text scale for just that monitor.
+
+Reboot after changing these. To unpin, run `set baseos.pin.monitor_2` with no value (or `unset baseos.pin.monitor_2`).
 
 ## Settings
 - `set baseos.text_scale 1`: monitor text scale (default 0.5)

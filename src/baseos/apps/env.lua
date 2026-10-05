@@ -94,7 +94,10 @@ function app.draw(screen, s)
     local data = s.env
 
     screen:titleBar("", ui.clock(), "ENVIRONMENT")
-    screen:button("home", 1, 1, 8, 1, "< HOME", colors.white, colors.gray)
+
+    if not screen.pinned then
+        screen:button("home", 1, 1, 8, 1, "< HOME", colors.white, colors.gray)
+    end
 
     local y = 3
 
