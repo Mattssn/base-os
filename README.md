@@ -25,6 +25,8 @@ src/                     <- what ends up on the computer
     apps/music.lua       Music app (now playing, controls, queue)
     env.lua              reads every environment detector (weather, light, entities, radiation)
     apps/env.lua         Environment app (per detector info + nearby entities)
+    restock.lua          keeps items in your inventory via Inventory Manager + ME Bridge
+    apps/restock.lua     Restock app (what's kept, recent deliveries, on/off)
 server/                       YouTube -> DFPWM music server (Docker, runs on the home server)
 reference/ae2_dashboard.lua   the original standalone dashboard
 docs/                         CC:T + Advanced Peripherals API notes for 1.21.1
@@ -44,11 +46,29 @@ Type `quit` on the computer (or hold Ctrl+T) to stop Base OS.
 ## Music
 See [docs/music-setup.md](docs/music-setup.md). It needs a one-time CC:Tweaked config change on the Minecraft server, then `set baseos.music_server http://100.64.7.94:8096`.
 
+## Restock (keep your inventory full from the ME system)
+Needs an **Inventory Manager** with a **Memory Card** bound to you (right-click the card, then put it in the
+manager), plus an **empty chest touching the Inventory Manager**. The ME Bridge has to reach that chest:
+connect the chest to the network with a wired modem, or place it against the ME Bridge as well.
+Items go ME Bridge -> chest -> Inventory Manager -> you. Anything that doesn't fit goes back into ME.
+
+On the computer:
+| Command | |
+|---|---|
+| `restock setup` | finds the chest automatically (moves 1 item around to test, then puts it back) |
+| `restock add torch 64` | keep 64 torches in your inventory (asks which one if several items match) |
+| `restock` | list what's kept, with numbers |
+| `restock remove 2` | stop keeping item 2 |
+| `restock off` / `restock on` | pause / resume |
+
+It checks every 5 seconds while you're online. The RESTOCK app shows the list, recent deliveries
+and an ON/OFF button. **Only use an empty chest just for this**, because anything in it gets put into the ME system.
+
 ## Multiple monitors
 Connect as many monitors as you like (directly or over wired modems). Each one is an independent
 screen with its own start screen and taps, and they all share one ME/detector read. Monitors can be
 added or removed while Base OS is running. Find a monitor's name with `peripherals`.
-- `set baseos.pin.monitor_2 me`: that monitor always shows one app (`me`, `music` or `env`), with no HOME button.
+- `set baseos.pin.monitor_2 me`: that monitor always shows one app (`me`, `music`, `env` or `restock`), with no HOME button.
 - `set baseos.text_scale.monitor_2 1`: text scale for just that monitor.
 - `set baseos.pin.monitor_2 off`: Base OS leaves that monitor alone, e.g. a [Base Signs](https://github.com/Mattssn/base-signs) sign on the same cable network.
 

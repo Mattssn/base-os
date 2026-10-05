@@ -12,13 +12,15 @@ local me = require("me")
 local flow = require("flow")
 local music = require("music")
 local env = require("env")
+local restock = require("restock")
 local home = require("home")
 
 -- Apps shown on the start screen, in order. Add new ones here.
 local apps = {
     require("apps.me"),
     require("apps.music"),
-    require("apps.env")
+    require("apps.env"),
+    require("apps.restock")
 }
 
 local appsById = {}
@@ -206,6 +208,9 @@ local HELP = {
     "pause / skip / stop",
     "vol <0-300>    volume in %",
     "stats [reset]  why is music skipping?",
+    "restock        keep items in your inventory:",
+    "  restock add <item> [count] / remove <n>",
+    "  restock setup / on / off",
     "quit           stop Base OS"
 }
 
@@ -226,6 +231,93 @@ local function search(query)
     end
 
     return results or {}
+end
+
+-- Items in the ME system matching `query` (display name or id), most plentiful first.
+-- An exact name match wins outright.
+local function findItems(query)
+    local q = query:lower()
+    local matches = {}
+
+    for _, item in ipairs(snapshot.items) do
+        local label = (item.displayName or item.name):lower()
+        local name = item.name:lower()
+
+        if label == q or name == q or name:match(":(.+)$") == q then
+            return { item }
+        end
+
+        if label:find(q, 1, true) or name:find(q, 1, true) then
+            table.insert(matches, item)
+        end
+    end
+
+    table.sort(matches, function(a, b)
+        return (tonumber(a.count) or 0) > (tonumber(b.count) or 0)
+    end)
+
+    return matches
+end
+
+local function restockCommand(arg)
+    local sub, rest = arg:match("^(%S*)%s*(.-)$")
+
+    sub = sub:lower()
+
+    if sub == "" or sub == "list" then
+        print("Restock: " .. restock.status)
+
+        for i, rule in ipairs(restock.rules()) do
+            print(("%d. %s  %d/%d"):format(i, rule.label, restock.have[rule.name] or 0, rule.keep))
+        end
+
+        if #restock.rules() == 0 then
+            print("Nothing yet. Try: restock add torch 64")
+        end
+    elseif sub == "add" then
+        local query, count = rest:match("^(.-)%s+(%d+)$")
+
+        query = query or rest
+        count = tonumber(count) or 64
+
+        if query == "" then
+            return print("Usage: restock add <item> [count]")
+        end
+
+        local matches = findItems(query)
+        local item = matches[1]
+
+        if not item then
+            return print("No item matching '" .. query .. "' in the ME system.")
+        end
+
+        if #matches > 1 then
+            for i = 1, math.min(9, #matches) do
+                print(("%d. %s (%s)"):format(i, matches[i].displayName or matches[i].name, ui.fmt(matches[i].count)))
+            end
+
+            write("Which one? (number, Enter to cancel) ")
+            item = matches[tonumber(read())]
+
+            if not item then
+                return
+            end
+        end
+
+        restock.add(item.name, item.displayName or item.name, count)
+        print("Keeping " .. count .. " " .. (item.displayName or item.name) .. " in your inventory.")
+    elseif sub == "remove" then
+        local removed = tonumber(rest) and restock.remove(tonumber(rest))
+
+        print(removed and "Removed " .. removed.label .. "." or "Usage: restock remove <number from restock list>")
+    elseif sub == "on" or sub == "off" then
+        restock.setEnabled(sub == "on")
+        print("Restock " .. sub .. ".")
+    elseif sub == "setup" then
+        restock.setup(print, snapshot.items)
+    else
+        print("restock [list] | add <item> [count] | remove <n> | setup | on | off")
+    end
 end
 
 -- Returns "quit" to stop Base OS
@@ -262,6 +354,8 @@ local function command(line)
             music.resetStats()
             print("Stats reset.")
         end
+    elseif lower == "restock" then
+        restockCommand(arg)
     elseif lower == "skip" then
         music.skip()
     elseif lower == "stop" then
@@ -328,7 +422,7 @@ print("Type a song name to play it, or 'help'.")
 draw()
 
 -- Ctrl+T (terminate) counts as a clean stop, so startup.lua doesn't restart us
-local ok, err = pcall(parallel.waitForAny, poller, envPoller, input, console, music.run)
+local ok, err = pcall(parallel.waitForAny, poller, envPoller, input, console, music.run, restock.run)
 
 if not ok and err ~= "Terminated" then
     error(err, 0)

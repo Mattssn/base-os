@@ -5,6 +5,7 @@ local ui = require("ui")
 local me = require("me")
 local music = require("music")
 local env = require("env")
+local restock = require("restock")
 
 local home = {}
 
@@ -115,6 +116,11 @@ function home.draw(screen, s, apps)
             stat(screen, y, "Radiation", e.radiationText or tostring(e.radiation), e.alert and colors.red or colors.lime)
             y = y + 1
         end
+    end
+
+    if #restock.rules() > 0 then
+        stat(screen, y, "Restock", restock.status, restock.ok and colors.lime or colors.orange)
+        y = y + 1
     end
 
     if music.current then
