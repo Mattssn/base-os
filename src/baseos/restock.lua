@@ -108,6 +108,58 @@ function restock.remove(index)
     return removed
 end
 
+function restock.setKeep(index, keep)
+    local rules = restock.rules()
+
+    if rules[index] then
+        rules[index].keep = math.max(1, keep)
+        saveRules(rules)
+    end
+end
+
+-- How well an item matches a search (lower is better), or nil if it doesn't: exact name,
+-- name starts with it, a word starts with it, anywhere in the name or id
+local function rank(item, q)
+    local label = (item.displayName or item.name):lower()
+    local name = item.name:lower()
+
+    if q == "" or label == q or name == q or name:match(":(.+)$") == q then
+        return 0
+    elseif label:sub(1, #q) == q then
+        return 1
+    elseif label:find(" " .. q, 1, true) then
+        return 2
+    elseif label:find(q, 1, true) or name:find(q, 1, true) then
+        return 3
+    end
+end
+
+-- ME items matching `query`, best match first, then most plentiful.
+-- Returns the list and whether the first one is an exact match.
+function restock.search(items, query)
+    local q = query:lower()
+    local list, ranks = {}, {}
+
+    for _, item in ipairs(items) do
+        local r = rank(item, q)
+
+        if r then
+            table.insert(list, item)
+            ranks[item] = r
+        end
+    end
+
+    table.sort(list, function(a, b)
+        if ranks[a] ~= ranks[b] then
+            return ranks[a] < ranks[b]
+        end
+
+        return (tonumber(a.count) or 0) > (tonumber(b.count) or 0)
+    end)
+
+    return list, q ~= "" and list[1] ~= nil and ranks[list[1]] == 0
+end
+
 function restock.enabled()
     return settings.get("baseos.restock_enabled")
 end

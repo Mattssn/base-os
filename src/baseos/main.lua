@@ -125,6 +125,12 @@ end
 
 local function open(s, id)
     s.current = id
+
+    -- Apps can reset per-monitor state when opened
+    if appsById[id] and appsById[id].open then
+        appsById[id].open(s.ui)
+    end
+
     s.ui:clear()
     drawScreen(s)
 end
@@ -173,7 +179,11 @@ local function input()
             elseif id and appsById[id] then
                 open(s, id)
             elseif id and app and app.touch then
-                app.touch(id)
+                -- Returning true means the layout changed, so clear before redrawing
+                if app.touch(id, s.ui) then
+                    s.ui:clear()
+                end
+
                 draw() -- e.g. music controls change what every monitor shows
             end
         elseif event == "monitor_resize" and s then
@@ -233,32 +243,6 @@ local function search(query)
     return results or {}
 end
 
--- Items in the ME system matching `query` (display name or id), most plentiful first.
--- An exact name match wins outright.
-local function findItems(query)
-    local q = query:lower()
-    local matches = {}
-
-    for _, item in ipairs(snapshot.items) do
-        local label = (item.displayName or item.name):lower()
-        local name = item.name:lower()
-
-        if label == q or name == q or name:match(":(.+)$") == q then
-            return { item }
-        end
-
-        if label:find(q, 1, true) or name:find(q, 1, true) then
-            table.insert(matches, item)
-        end
-    end
-
-    table.sort(matches, function(a, b)
-        return (tonumber(a.count) or 0) > (tonumber(b.count) or 0)
-    end)
-
-    return matches
-end
-
 local function restockCommand(arg)
     local sub, rest = arg:match("^(%S*)%s*(.-)$")
 
@@ -284,14 +268,14 @@ local function restockCommand(arg)
             return print("Usage: restock add <item> [count]")
         end
 
-        local matches = findItems(query)
+        local matches, exact = restock.search(snapshot.items, query)
         local item = matches[1]
 
         if not item then
             return print("No item matching '" .. query .. "' in the ME system.")
         end
 
-        if #matches > 1 then
+        if #matches > 1 and not exact then
             for i = 1, math.min(9, #matches) do
                 print(("%d. %s (%s)"):format(i, matches[i].displayName or matches[i].name, ui.fmt(matches[i].count)))
             end

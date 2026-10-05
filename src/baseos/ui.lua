@@ -149,6 +149,11 @@ function ui:button(id, x, y, width, height, label, fg, bg)
     })
 end
 
+-- Register a touch area without drawing anything (for rows you've drawn yourself)
+function ui:hotspot(id, x, y, width, height)
+    table.insert(self.buttons, { id = id, x1 = x, y1 = y, x2 = x + width - 1, y2 = y + height - 1 })
+end
+
 function ui:clearButtons()
     self.buttons = {}
 end

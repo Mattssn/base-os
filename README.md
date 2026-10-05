@@ -61,7 +61,10 @@ On the computer:
 | `restock remove 2` | stop keeping item 2 |
 | `restock off` / `restock on` | pause / resume |
 
-It checks every 5 seconds while you're online. The RESTOCK app shows the list, recent deliveries
+You can also do it all by tapping in the **RESTOCK** app: **+ ADD** opens an on-screen keyboard to search the
+ME system, then pick an item and how many to keep. Each item has `-`/`+` and `x` (tap twice to remove).
+
+It checks every 5 seconds while you're online. The RESTOCK app also shows recent deliveries
 and an ON/OFF button. **Only use an empty chest just for this**, because anything in it gets put into the ME system.
 
 ## Multiple monitors
