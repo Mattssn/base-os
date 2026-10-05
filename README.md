@@ -62,7 +62,8 @@ On the computer:
 | `restock off` / `restock on` | pause / resume |
 
 You can also do it all by tapping in the **RESTOCK** app: **+ ADD** opens an on-screen keyboard to search the
-ME system, then pick an item and how many to keep. Each item has `-`/`+` and `x` (tap twice to remove).
+ME system, then pick an item and how many to keep. Each item has `-`/`+` and `x` (tap twice to remove);
+the **STEP 16 / STEP 64** button switches how much `-`/`+` change the amount by.
 
 It checks every 5 seconds while you're online. The RESTOCK app also shows recent deliveries
 and an ON/OFF button. **Only use an empty chest just for this**, because anything in it gets put into the ME system.

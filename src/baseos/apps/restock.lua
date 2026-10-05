@@ -14,12 +14,21 @@ local app = {
     color = colors.orange
 }
 
-local STEP = 16 -- -/+ on the list
 local KEYS = { "ABCDEFGHIJKLM", "NOPQRSTUVWXYZ" }
 
 local function state(screen)
     screen.restock = screen.restock or { mode = "list", filter = "", page = 1, count = 64, visible = {} }
     return screen.restock
+end
+
+settings.define("baseos.restock_step", {
+    description = "Base OS restock app: how much -/+ change an amount by (16 or 64)",
+    default = 16,
+    type = "number"
+})
+
+local function step()
+    return settings.get("baseos.restock_step") == 64 and 64 or 16
 end
 
 function app.open(screen)
@@ -41,7 +50,9 @@ local function drawList(screen, st)
 
     local rules = restock.rules()
 
-    screen:text(2, 5, "KEEPING IN YOUR INVENTORY (" .. #rules .. ")", colors.orange, nil, width - 9)
+    screen:text(2, 5, "KEEPING IN YOUR INVENTORY (" .. #rules .. ")", colors.orange, nil, width - 18)
+    screen:button("restock_step", w - 17, 5, 8, 1, "STEP " .. step(), colors.white, step() == 64 and colors.blue or colors.lightBlue)
+    screen:text(w - 9, 5, " ")
     screen:button("restock_add", w - 8, 5, 8, 1, "+ ADD", colors.white, colors.green)
 
     local logRows = math.min(#restock.log, math.max(0, math.floor((h - 8 - #rules) / 2)))
@@ -90,7 +101,7 @@ local function drawList(screen, st)
         end
     end
 
-    screen:row(h, st.confirm and " Tap ? again to remove it" or " -/+ change the amount, x removes", colors.gray)
+    screen:row(h, st.confirm and " Tap ? again to remove it" or " -/+ change the amount by " .. step() .. ", x removes", colors.gray)
 end
 
 --------------------------------------------------
@@ -242,6 +253,9 @@ function app.touch(id, screen)
 
     if action == "toggle" then
         restock.setEnabled(not restock.enabled())
+    elseif action == "step" then
+        settings.set("baseos.restock_step", step() == 64 and 16 or 64)
+        settings.save()
     elseif action == "add" then
         st.mode, st.filter, st.page = "pick", "", 1
         return true
@@ -249,7 +263,12 @@ function app.touch(id, screen)
         local rule = restock.rules()[n]
 
         if rule then
-            local keep = rule.keep + (action == "plus" and STEP or -STEP)
+            -- Snap to multiples of the step: 80 -> 128 / 64 with a step of 64
+            local size = step()
+            local keep = action == "plus"
+                and (math.floor(rule.keep / size) + 1) * size
+                or (math.ceil(rule.keep / size) - 1) * size
+
             restock.setKeep(n, math.max(1, keep))
         end
     elseif action == "del" then
