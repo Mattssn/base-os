@@ -51,7 +51,7 @@ added or removed while Base OS is running. Find a monitor's name with `periphera
 - `set baseos.pin.monitor_2 me`: that monitor always shows one app (`me`, `music` or `env`), with no HOME button.
 - `set baseos.text_scale.monitor_2 1`: text scale for just that monitor.
 
-Reboot after changing these. To unpin, run `set baseos.pin.monitor_2` with no value (or `unset baseos.pin.monitor_2`).
+Reboot after changing these. To unpin, run `set baseos.pin.monitor_2 none`.
 
 ## Settings
 - `set baseos.text_scale 1`: monitor text scale (default 0.5)
