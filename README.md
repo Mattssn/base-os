@@ -28,6 +28,7 @@ src/                     <- what ends up on the computer
     restock.lua          keeps items in your inventory via Inventory Manager + ME Bridge
     apps/restock.lua     Restock app (what's kept, recent deliveries, on/off)
 server/                       YouTube -> DFPWM music server (Docker, runs on the home server)
+speaker/                      speaker computer program (install.lua speaker): plays Base OS music over a wireless modem
 reference/ae2_dashboard.lua   the original standalone dashboard
 docs/                         CC:T + Advanced Peripherals API notes for 1.21.1
 ```
@@ -45,6 +46,11 @@ Type `quit` on the computer (or hold Ctrl+T) to stop Base OS.
 
 ## Music
 See [docs/music-setup.md](docs/music-setup.md). It needs a one-time CC:Tweaked config change on the Minecraft server, then `set baseos.music_server http://100.64.7.94:8096`.
+
+**Speakers around the base without cables:** give the Base OS computer a wireless (or ender) modem. Then, on any
+computer with a wireless modem and speakers, run
+`wget run https://raw.githubusercontent.com/Mattssn/base-os/main/install.lua speaker`.
+It plays the same music, in sync with the main speakers.
 
 ## Restock (keep your inventory full from the ME system)
 Needs an **Inventory Manager** with a **Memory Card** bound to you (right-click the card, then put it in the

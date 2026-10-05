@@ -55,3 +55,22 @@ Type on the computer:
 | `quit` | stop Base OS |
 
 The MUSIC app on the monitor has the same controls as buttons, plus the queue.
+
+## 4. Speakers around the base, no cables (speaker computers)
+The Base OS computer broadcasts the music over a **wireless or ender modem**. Any other computer
+with a wireless/ender modem and speakers can play it, in sync with the main speakers.
+
+1. **Base OS computer:** attach a wireless modem or an ender modem and reboot. It says
+   "Speaker computers: broadcasting music over the wireless modem."
+2. **Each speaker spot:** place a computer with a wireless modem (or an ender modem) and speakers
+   touching it, or on wired modems. Then run:
+   ```
+   wget run https://raw.githubusercontent.com/Mattssn/base-os/main/install.lua speaker
+   ```
+   Run the same command (with `speaker`) to update it later.
+3. Play music as usual. Every speaker computer in range plays along. Pause, skip and stop apply everywhere.
+
+- **Range:** wireless modems reach 64 blocks near the ground and up to 384 blocks high up. An **ender modem** has unlimited range, even across dimensions.
+- **Volume per spot:** on a speaker computer, run `set speaker.volume 0.5` (1 = same as Base OS, up to 3).
+- **Sync:** each slice of audio carries the time it starts on the server's clock, and speaker computers start on that time, so they stay together (within about a tick).
+- **No speakers on the Base OS computer itself?** That's fine. It then paces the music by the clock.

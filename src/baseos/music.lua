@@ -1,6 +1,10 @@
 -- Base OS: music player service
 -- Streams DFPWM audio from the Base OS music server (server/ in the repo) to every speaker.
 -- Runs as its own coroutine (music.run) so music keeps playing on every screen.
+--
+-- Every slice is also broadcast over wireless/ender modems (rednet, protocol "baseos_music")
+-- for speaker computers (speaker/ in the repo) around the base. With no local speakers, slices
+-- are handed out by the clock instead of by speaker_audio_empty.
 
 local dfpwm = require("cc.audio.dfpwm")
 
@@ -10,6 +14,8 @@ local CHUNK = 256 * 1024    -- bytes per HTTP request (~43s of audio)
 local SLICE = 16 * 1024     -- bytes per playAudio call (128K samples, ~2.7s)
 local LOW_WATER = 64 * 1024 -- fetch the next chunk when less than this is waiting (~11s)
 local BYTES_PER_SECOND = 6000 -- DFPWM at 48 kHz = 8 samples per byte
+local SLICE_MS = SLICE / BYTES_PER_SECOND * 1000
+local PROTOCOL = "baseos_music"
 
 music.queue = {}      -- { id, title, duration }
 music.current = nil
@@ -28,6 +34,9 @@ local pendingBytes = 0
 local accepted = {}   -- speaker name -> true once it took `pending`
 local played = 0      -- bytes played so far
 local generation = 0  -- bumped on every track change so stale responses are ignored
+local nextSend = nil  -- epoch ms of the next slice when pacing by the clock (no local speakers)
+local timelineEnd = nil -- epoch ms when the audio handed out so far finishes playing
+local session = tostring(os.epoch("utc")) -- tells speaker computers a restart is a new track
 
 -- Stutter diagnostics (the `stats` console command). Measured between each speaker's
 -- speaker_audio_empty events, which arrive once per slice while playing:
@@ -104,10 +113,37 @@ local function speakers()
     return { peripheral.find("speaker") }
 end
 
-local function stopSpeakers()
+--------------------------------------------------
+-- SPEAKER COMPUTERS (rednet)
+--------------------------------------------------
+
+-- Open every wireless/ender modem. Returns how many are open.
+function music.openModems()
+    local open = 0
+
+    for _, name in ipairs(peripheral.getNames()) do
+        if peripheral.hasType(name, "modem") and peripheral.call(name, "isWireless") then
+            rednet.open(name)
+            open = open + 1
+        end
+    end
+
+    return open
+end
+
+local function broadcast(message)
+    if rednet.isOpen() then
+        pcall(rednet.broadcast, message, PROTOCOL)
+    end
+end
+
+local function stopSpeakers(reason)
     for _, speaker in ipairs(speakers()) do
         speaker.stop()
     end
+
+    timelineEnd = nil
+    broadcast({ type = "stop", reason = reason })
 end
 
 function music.position()
@@ -127,6 +163,7 @@ local function nextTrack()
     pending = nil
     accepted = {}
     played = 0
+    nextSend = nil
     lastEmpty = nil
     statSpeaker = nil
 
@@ -151,14 +188,14 @@ function music.add(track)
 end
 
 function music.skip()
-    stopSpeakers()
+    stopSpeakers("skip")
     nextTrack()
     wake()
 end
 
 function music.stop()
     music.queue = {}
-    stopSpeakers()
+    stopSpeakers("stop")
     nextTrack()
     wake()
 end
@@ -168,9 +205,11 @@ function music.togglePause()
         music.state = "playing"
     elseif music.state == "playing" or music.state == "loading" then
         music.state = "paused"
-        stopSpeakers()
-        accepted = {} -- replay the current slice on resume
+        stopSpeakers("pause")
+        pending = nil -- resume at the next slice, together with the speaker computers
+        accepted = {}
         lastEmpty = nil
+        nextSend = nil
     end
 
     wake()
@@ -271,47 +310,117 @@ local function onChunk(handle)
     end
 end
 
+-- Take the next slice from the download buffer and send it to the speaker computers.
+-- Returns the slice, nil if more data is needed, or false when the track has ended
+-- (the next track is then loaded).
+local function takeSlice()
+    if #buffer < SLICE and not serverDone then
+        return nil
+    end
+
+    if #buffer == 0 then
+        -- Track finished (the last slice is still playing out, the next track queues behind it)
+        nextTrack()
+        return false
+    end
+
+    local slice = buffer:sub(1, SLICE)
+    buffer = buffer:sub(SLICE + 1)
+
+    music.state = "playing"
+    music.message = nil
+
+    -- When this slice starts playing: right after what's already been handed out, or now.
+    -- Speaker computers that are idle wait for this moment so they start in sync.
+    local now = os.epoch("utc")
+    local at = math.max(now, timelineEnd or now)
+
+    timelineEnd = at + #slice / BYTES_PER_SECOND * 1000
+
+    broadcast({
+        type = "audio",
+        track = session .. ":" .. generation,
+        title = music.current.title,
+        volume = music.volume,
+        at = at,
+        data = slice
+    })
+
+    return slice
+end
+
+local function fetchIfLow()
+    if not request and not serverDone and #buffer < LOW_WATER then
+        fetch()
+    end
+end
+
+-- No local speakers: hand slices to the speaker computers by the clock, two ahead so
+-- their speakers always have the next one queued.
+local function pumpByClock()
+    local now = os.epoch("utc")
+
+    nextSend = nextSend or now - SLICE_MS
+
+    while now >= nextSend do
+        local slice = takeSlice()
+
+        if slice == false then
+            return true -- new track: pump again
+        elseif not slice then
+            return -- wait for more data
+        end
+
+        played = played + #slice
+        nextSend = nextSend + SLICE_MS
+        fetchIfLow()
+    end
+
+    os.startTimer((nextSend - now) / 1000)
+end
+
 -- Move audio along: fetch when low, decode, and hand slices to every speaker.
 local function pump()
     if music.state ~= "loading" and music.state ~= "playing" then
         return
     end
 
-    if not request and not serverDone and #buffer < LOW_WATER then
-        fetch()
+    fetchIfLow()
 
-        if not music.current then
-            return
-        end
+    if not music.current then
+        return
     end
 
     local targets = speakers()
 
     if #targets == 0 then
-        music.message = "No speakers found"
+        if not rednet.isOpen() then
+            music.message = "No speakers found"
+            return
+        end
+
+        if pumpByClock() then
+            return pump()
+        end
+
         return
     end
 
+    nextSend = nil
+
     while true do
         if not pending then
-            if #buffer < SLICE and not serverDone then
+            local slice = takeSlice()
+
+            if slice == false then
+                return pump()
+            elseif not slice then
                 return -- wait for more data
             end
-
-            if #buffer == 0 then
-                -- Track finished (the last slice is still playing out, the next track queues behind it)
-                nextTrack()
-                return pump()
-            end
-
-            local slice = buffer:sub(1, SLICE)
-            buffer = buffer:sub(SLICE + 1)
 
             pending = decoder(slice)
             pendingBytes = #slice
             accepted = {}
-            music.state = "playing"
-            music.message = nil
         end
 
         local all = true
@@ -335,9 +444,7 @@ local function pump()
         played = played + pendingBytes
         pending = nil
 
-        if not request and not serverDone and #buffer < LOW_WATER then
-            fetch()
-        end
+        fetchIfLow()
     end
 end
 
@@ -357,7 +464,7 @@ function music.run()
             -- a = error message, b = response handle (if the server answered with an error)
             request = nil
             music.message = "Couldn't play " .. music.current.title .. ": " .. errorText(b, a)
-            stopSpeakers()
+            stopSpeakers("error")
             nextTrack()
         end
     end

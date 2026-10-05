@@ -191,6 +191,10 @@ local function input()
         elseif event == "peripheral" then
             me.reset()
 
+            if peripheral.hasType(a, "modem") then
+                music.openModems() -- for speaker computers
+            end
+
             if peripheral.hasType(a, "monitor") then
                 addMonitor(a)
 
@@ -402,6 +406,10 @@ end
 table.sort(names)
 print(#names > 0 and "Base OS on " .. table.concat(names, ", ") or "Base OS (no monitor yet, connect one any time)")
 print("Type a song name to play it, or 'help'.")
+
+if music.openModems() > 0 then
+    print("Speaker computers: broadcasting music over the wireless modem.")
+end
 
 draw()
 
