@@ -50,6 +50,7 @@ screen with its own start screen and taps, and they all share one ME/detector re
 added or removed while Base OS is running. Find a monitor's name with `peripherals`.
 - `set baseos.pin.monitor_2 me`: that monitor always shows one app (`me`, `music` or `env`), with no HOME button.
 - `set baseos.text_scale.monitor_2 1`: text scale for just that monitor.
+- `set baseos.pin.monitor_2 off`: Base OS leaves that monitor alone, e.g. a [Base Signs](https://github.com/Mattssn/base-signs) sign on the same cable network.
 
 Reboot after changing these. To unpin, run `set baseos.pin.monitor_2 none`.
 

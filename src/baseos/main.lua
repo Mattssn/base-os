@@ -59,11 +59,16 @@ local FLOW_WINDOW = settings.get("baseos.flow_window")
 -- Optional per-monitor settings (use the name from `peripherals`, e.g. monitor_2):
 --   set baseos.text_scale.monitor_2 1    text scale for just that monitor
 --   set baseos.pin.monitor_2 me          always show one app (me, music, env), no HOME button
+--   set baseos.pin.monitor_2 off         leave this monitor alone (e.g. it's a Base Signs sign)
 local screens = {} -- monitor name -> { ui = screen, current = "home" or app id, pinned = app id or nil }
 
 local function addMonitor(name)
     local mon = peripheral.wrap(name)
     local pinned = settings.get("baseos.pin." .. name)
+
+    if pinned == "off" then
+        return
+    end
 
     if not appsById[pinned] then
         pinned = nil
@@ -176,7 +181,10 @@ local function input()
 
             if peripheral.hasType(a, "monitor") then
                 addMonitor(a)
-                pcall(drawScreen, screens[a])
+
+                if screens[a] then
+                    pcall(drawScreen, screens[a])
+                end
             end
         elseif event == "peripheral_detach" then
             me.reset()
