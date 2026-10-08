@@ -79,13 +79,15 @@ Connect as many monitors as you like (directly or over wired modems). Each one i
 screen with its own start screen and taps, and they all share one ME/detector read. Monitors can be
 added or removed while Base OS is running. Find a monitor's name with `peripherals`.
 - `set baseos.pin.monitor_2 me`: that monitor always shows one app (`me`, `music`, `env` or `restock`), with no HOME button.
-- `set baseos.text_scale.monitor_2 1`: text scale for just that monitor.
+- `set baseos.text_scale.monitor_2 1`: text scale for just that monitor (`auto` for automatic).
 - `set baseos.pin.monitor_2 off`: Base OS leaves that monitor alone, e.g. a [Base Signs](https://github.com/Mattssn/base-signs) sign on the same cable network.
 
 Reboot after changing these. To unpin, run `set baseos.pin.monitor_2 none`.
 
 ## Settings
-- `set baseos.text_scale 1`: monitor text scale (default 0.5)
+- `set baseos.text_scale 1`: monitor text scale (0.5-5). The default `auto` makes text as big as each
+  monitor allows while keeping room for the apps (at least 50x26 characters), so bigger monitors get
+  bigger text. Use `set baseos.text_scale auto` to go back to automatic.
 - `set baseos.refresh 2`: seconds between refreshes (default 1)
 - `set baseos.music_server <url>`: music server address (see Music)
 - `set baseos.env_range 12`: entity scan radius for environment detectors (1-16, default 8; above 8 may need energy)

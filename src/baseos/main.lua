@@ -34,9 +34,7 @@ end
 --------------------------------------------------
 
 settings.define("baseos.text_scale", {
-    description = "Base OS monitor text scale (0.5 - 5)",
-    default = 0.5,
-    type = "number"
+    description = "Base OS monitor text scale (0.5 - 5), or auto (default): as big as fits"
 })
 
 settings.define("baseos.refresh", {
@@ -59,10 +57,36 @@ local FLOW_WINDOW = settings.get("baseos.flow_window")
 --------------------------------------------------
 
 -- Optional per-monitor settings (use the name from `peripherals`, e.g. monitor_2):
---   set baseos.text_scale.monitor_2 1    text scale for just that monitor
+--   set baseos.text_scale.monitor_2 1    text scale for just that monitor (or auto)
 --   set baseos.pin.monitor_2 me          always show one app (me, music, env), no HOME button
 --   set baseos.pin.monitor_2 off         leave this monitor alone (e.g. it's a Base Signs sign)
-local screens = {} -- monitor name -> { ui = screen, current = "home" or app id, pinned = app id or nil }
+local screens = {} -- monitor name -> { ui = screen, current = "home" or app id, pinned = app id or nil, size }
+
+-- Automatic text scale: the biggest that still leaves this much room for the apps
+-- (the ME app's two-column layout and the restock keyboard need about this much)
+local MIN_W, MIN_H = 50, 26
+
+local function applyScale(mon, name)
+    local fixed = tonumber(settings.get("baseos.text_scale." .. name))
+        or tonumber(settings.get("baseos.text_scale"))
+
+    if fixed then
+        mon.setTextScale(math.max(0.5, math.min(5, fixed)))
+        return
+    end
+
+    for scale = 5, 1, -0.5 do
+        mon.setTextScale(scale)
+
+        local w, h = mon.getSize()
+
+        if w >= MIN_W and h >= MIN_H then
+            return
+        end
+    end
+
+    mon.setTextScale(0.5)
+end
 
 local function addMonitor(name)
     local mon = peripheral.wrap(name)
@@ -76,13 +100,13 @@ local function addMonitor(name)
         pinned = nil
     end
 
-    mon.setTextScale(settings.get("baseos.text_scale." .. name) or settings.get("baseos.text_scale"))
+    applyScale(mon, name)
 
     local screen = ui.new(mon)
     screen.pinned = pinned ~= nil
     screen:clear()
 
-    screens[name] = { ui = screen, current = pinned or "home", pinned = pinned }
+    screens[name] = { ui = screen, current = pinned or "home", pinned = pinned, size = { mon.getSize() } }
 end
 
 for _, name in ipairs(peripheral.getNames()) do
@@ -187,7 +211,15 @@ local function input()
                 draw() -- e.g. music controls change what every monitor shows
             end
         elseif event == "monitor_resize" and s then
-            open(s, s.current)
+            -- Trying text scales fires this too, so only react when the monitor really
+            -- changed size (blocks added or removed): pick the scale again and redraw
+            local w, h = s.ui.mon.getSize()
+
+            if w ~= s.size[1] or h ~= s.size[2] then
+                applyScale(s.ui.mon, a)
+                s.size = { s.ui.mon.getSize() }
+                open(s, s.current)
+            end
         elseif event == "peripheral" then
             me.reset()
 
