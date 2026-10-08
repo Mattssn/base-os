@@ -77,8 +77,14 @@ def convert(vid):
     ffmpeg_err = ffmpeg.communicate()[1].decode(errors="replace")
     ytdlp_err = ytdlp.communicate()[1].decode(errors="replace")
 
+    # ffmpeg stops at MAX_SECONDS, which makes yt-dlp fail with "Broken pipe": that's a
+    # finished (cut off) track, not an error. Any other yt-dlp failure (e.g. a 403 halfway)
+    # would leave a truncated file, so that still counts as failed.
+    cut_off = ytdlp.returncode != 0 and "Broken pipe" in ytdlp_err
+    ok = ffmpeg.returncode == 0 and (ytdlp.returncode == 0 or cut_off) and part.exists()
+
     with jobs_lock:
-        if ffmpeg.returncode == 0 and ytdlp.returncode == 0 and part.exists():
+        if ok:
             part.rename(done_path(vid))
             jobs.pop(vid, None)
             trim_cache()
