@@ -3,6 +3,7 @@
 
 local ui = require("ui")
 local me = require("me")
+local fe = require("fe")
 local music = require("music")
 local env = require("env")
 local restock = require("restock")
@@ -56,6 +57,15 @@ function home.draw(screen, s, apps)
         local energyPct = ui.pct(s.energy, s.energyMax)
         statBar(screen, y, "Power", energyPct, energyPct < 0.2 and colors.red or colors.lime)
         y = y + 1
+
+        if s.fe then
+            local f = s.fe
+            local text = ui.fmt(f.stored) .. (f.capacity and (" / " .. ui.fmt(f.capacity)) or "") .. " FE"
+            local rate = fe.rateText(f, ui.fmt)
+
+            stat(screen, y, "FE Stored", text .. (rate ~= "" and "   " .. rate or ""), colors.white)
+            y = y + 1
+        end
 
         local cellPct = ui.pct(s.internalUsed, s.internalMax)
         statBar(screen, y, "Cells", cellPct, storageColor(cellPct))

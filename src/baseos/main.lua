@@ -13,6 +13,7 @@ local flow = require("flow")
 local music = require("music")
 local env = require("env")
 local restock = require("restock")
+local fe = require("fe")
 local home = require("home")
 
 -- Apps shown on the start screen, in order. Add new ones here.
@@ -124,6 +125,7 @@ snapshot.loading = true
 snapshot.flow = flow.result
 
 local envData = { detectors = {} }
+local feData = nil -- Applied Flux FE (via Block Readers), nil if none found
 
 local function drawScreen(s)
     s.ui:resize()
@@ -138,6 +140,7 @@ end
 
 local function draw()
     snapshot.env = envData
+    snapshot.fe = feData
 
     for name, s in pairs(screens) do
         -- A monitor can disappear mid-draw; its peripheral_detach event removes it
@@ -174,13 +177,14 @@ local function poller()
     end
 end
 
--- Environment detectors: every call takes a server tick, so read them slowly and
--- separately from the ME system.
+-- Environment detectors and Block Readers (Applied Flux FE): every call takes a server
+-- tick, so read them slowly and separately from the ME system.
 local ENV_REFRESH = 5
 
 local function envPoller()
     while true do
         envData = env.read()
+        feData = fe.read()
         ui.status = env.status(envData)
         ui.alert = envData.alert
         draw()

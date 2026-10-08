@@ -4,6 +4,7 @@
 
 local ui = require("ui")
 local me = require("me")
+local fe = require("fe")
 
 local app = {
     id = "me",
@@ -99,7 +100,8 @@ end
 -- SECTIONS
 --------------------------------------------------
 
--- Grid, power, storage, network: rows 3-19
+-- Grid, power (+ Applied Flux FE), storage, network: rows 3-19, or 3-22 with FE.
+-- Returns the last row used.
 local function drawDashboard(screen, s, col)
     local status, statusColor = me.status(s)
 
@@ -113,18 +115,35 @@ local function drawDashboard(screen, s, col)
     screen:bar(col.x, 7, col.w, energyPct, colors.lime)
     line(screen, col, 8, string.format("%.1f%%   Usage: %s AE/t", energyPct * 100, ui.fmt(s.energyUsage)), colors.lightGray)
 
-    line(screen, col, 10, "STORAGE", colors.orange)
-    line(screen, col, 11, "Items visible: " .. ui.fmt(s.totalItems), colors.white)
-    line(screen, col, 12, "Cells: " .. #s.cells .. "   " .. ui.fmt(s.internalUsed) .. " / " .. ui.fmt(s.internalMax) .. " bytes", colors.lightGray)
-    screen:bar(col.x, 13, col.w, ui.pct(s.internalUsed, s.internalMax), colors.cyan)
-    line(screen, col, 14, "Storage Bus: " .. ui.fmt(s.externalUsed) .. " / " .. ui.fmt(s.externalMax) .. " items", colors.lightGray)
-    screen:bar(col.x, 15, col.w, ui.pct(s.externalUsed, s.externalMax), colors.orange)
+    -- Applied Flux FE (read through Block Readers on the ME Drives), pushes the rest down 3 rows
+    local o = 0
+
+    if s.fe then
+        local f = s.fe
+        local total = f.capacity and (" / " .. ui.fmt(f.capacity)) or ""
+
+        line(screen, col, 10, "FE " .. ui.fmt(f.stored) .. total .. "   " .. fe.rateText(f, ui.fmt), colors.white)
+        screen:bar(col.x, 11, col.w, f.capacity and ui.pct(f.stored, f.capacity) or 0, colors.red)
+        line(screen, col, 12, "")
+        o = 3
+    end
+
+    line(screen, col, 10 + o, "STORAGE", colors.orange)
+    line(screen, col, 11 + o, "Items visible: " .. ui.fmt(s.totalItems), colors.white)
+    line(screen, col, 12 + o, "Cells: " .. #s.cells .. "   " .. ui.fmt(s.internalUsed) .. " / " .. ui.fmt(s.internalMax) .. " bytes", colors.lightGray)
+    screen:bar(col.x, 13 + o, col.w, ui.pct(s.internalUsed, s.internalMax), colors.cyan)
+    line(screen, col, 14 + o, "Storage Bus: " .. ui.fmt(s.externalUsed) .. " / " .. ui.fmt(s.externalMax) .. " items", colors.lightGray)
+    screen:bar(col.x, 15 + o, col.w, ui.pct(s.externalUsed, s.externalMax), colors.orange)
+    line(screen, col, 16 + o, "")
 
     local craft, craftColor = me.craftingStatus(s)
 
-    line(screen, col, 17, "NETWORK", colors.cyan)
-    line(screen, col, 18, "Item Types: " .. #s.items, colors.white)
-    line(screen, col, 19, "Crafting: " .. craft, craftColor)
+    line(screen, col, 17 + o, "NETWORK", colors.cyan)
+    line(screen, col, 18 + o, "Item Types: " .. #s.items, colors.white)
+    line(screen, col, 19 + o, "Crafting: " .. craft, craftColor)
+    line(screen, col, 20 + o, "")
+
+    return 19 + o
 end
 
 -- Flow header + in/out totals + status: 3 rows starting at y
@@ -168,10 +187,10 @@ function app.draw(screen, s)
         local left = { x = 2, w = half - 2 }
         local right = { x = half + 2, w = w - half - 2 }
 
-        drawDashboard(screen, s, left)
+        local last = drawDashboard(screen, s, left)
 
-        if h >= 23 then
-            lists(screen, left, 21, h, { topItems(s) })
+        if h >= last + 4 then
+            lists(screen, left, last + 2, h, { topItems(s) })
         end
 
         drawFlowSummary(screen, f, right, 3)
@@ -182,14 +201,14 @@ function app.draw(screen, s)
     else
         local col = { x = 2, w = w - 2 }
 
-        drawDashboard(screen, s, col)
-        drawFlowSummary(screen, f, col, 21)
+        local last = drawDashboard(screen, s, col)
+        drawFlowSummary(screen, f, col, last + 2)
 
         -- Only show the lists that get at least a few entries each
-        if h >= 36 then
-            lists(screen, col, 25, h, { topItems(s), incoming, outgoing })
-        elseif h >= 30 then
-            lists(screen, col, 25, h, { incoming, outgoing })
+        if h >= last + 17 then
+            lists(screen, col, last + 6, h, { topItems(s), incoming, outgoing })
+        elseif h >= last + 11 then
+            lists(screen, col, last + 6, h, { incoming, outgoing })
         end
     end
 end

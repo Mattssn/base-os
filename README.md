@@ -25,6 +25,7 @@ src/                     <- what ends up on the computer
     apps/music.lua       Music app (now playing, controls, queue)
     env.lua              reads every environment detector (weather, light, entities, radiation)
     apps/env.lua         Environment app (per detector info + nearby entities)
+    fe.lua               Applied Flux FE stored, read from ME Drives with Block Readers
     restock.lua          keeps items in your inventory via Inventory Manager + ME Bridge
     apps/restock.lua     Restock app (what's kept, recent deliveries, on/off)
 server/                       YouTube -> DFPWM music server (Docker, runs on the home server)
@@ -51,6 +52,16 @@ See [docs/music-setup.md](docs/music-setup.md). It needs a one-time CC:Tweaked c
 computer with a wireless modem and speakers, run
 `wget run https://raw.githubusercontent.com/Mattssn/base-os/main/install.lua speaker`.
 It plays the same music, in sync with the main speakers.
+
+## Applied Flux power (FE in ME cells)
+The ME Bridge can't see FE stored in Applied Flux cells, and the Flux Accessor caps what it reports
+at 2,147,483,647 FE. Instead, put an **Advanced Peripherals Block Reader** with its front against
+each **ME Drive that holds FE cells**, and connect it to the computer (wired modem, right-click it on).
+Base OS reads each cell's exact stored FE from the drive and shows it under POWER in the ME System
+app and as **FE Stored** on the start screen, with capacity and FE/t. Block Readers facing anything
+else are ignored. Capacity assumes Applied Flux's default 1,048,576 FE per byte. If your config is
+different, run `set baseos.fe_per_byte <amount>`. Values come from the drive's saved data, so they
+can lag a little behind what's really stored.
 
 ## Restock (keep your inventory full from the ME system)
 Needs an **Inventory Manager** with a **Memory Card** bound to you (right-click the card, then put it in the
